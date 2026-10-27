@@ -6,14 +6,16 @@
 
 ## 기술 스택 (변경 금지)
 - HTML + CSS + 순수 JavaScript만 사용한다. (React 등 프레임워크, 빌드 도구 사용 금지)
-- index.html 을 더블클릭해서 화면을 열 수 있어야 한다. 단, JSON을 읽을 수 없으면 '배포 주소로 열어 주세요'를 표시한다.
+- index.html 을 더블클릭해서 화면을 열 수 있어야 한다. 일정 데이터는 Supabase에서 읽으므로 config.js가 설정되지 않으면 설정 안내를 표시한다.
 
 ## 폴더 구조
 - index.html : 화면 구조
 - style.css  : 디자인
 - logic.js   : 판단 규칙만 (화면을 다루는 코드 금지)
 - app.js     : 화면 동작 (목록 그리기, 일정 추가)
-- data/tasks.json : 기본 일정 데이터
+- data/tasks.json : 초기 참고 데이터 (F-06 실행 경로에서는 사용하지 않음)
+- config.js : Supabase 주소와 공개용 키 두 줄
+- setup.sql : Supabase 테이블·제약·RLS·초기 데이터
 - PRD.md · CLAUDE.md · README.md : 문서
 
 ## 작업 방식
@@ -22,7 +24,8 @@
 3. 끝나면 바꾼 파일, 내가 확인할 방법(T-번호), 남은 문제를 보고한다.
 
 ## 보안 · 데이터 규칙
-- 데이터는 data/ 폴더 JSON에 둔다. 화면에서 추가한 일정만 브라우저에 별도로 저장한다.
+- 일정은 Supabase의 public.wx_tasks 표에서 읽고 추가한다. 지역과 구분의 허용 값은 DB CHECK 제약으로도 강제한다.
+- config.js에는 Supabase 주소와 공개용 키만 둔다. 서비스 롤 키 등 비밀 키는 절대 넣지 않는다.
 - 가상 데이터만 사용한다. 실제 이름 · 연락처 · 기관 내부 자료를 넣지 않는다.
 - 사용자가 입력한 글자는 textContent 로 표시한다.
 - 비밀 키는 코드 · 채팅 · GitHub 에 넣지 않는다.
