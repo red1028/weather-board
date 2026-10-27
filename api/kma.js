@@ -16,7 +16,7 @@ async function weatherFor(region, now) {
   const date = kst.toISOString().slice(0, 10).replace(/-/g, '');
   const previous = new Date(kst.getTime() - 86400000).toISOString().slice(0, 10).replace(/-/g, '');
   const [nx, ny] = grids[region];
-  let key = process.env.ServerKey.trim();
+  let key = process.env.ServiceKey.trim();
   try { key = decodeURIComponent(key); } catch (_) { /* 원문 키 사용 */ }
   const params = new URLSearchParams({ pageNo: '1', numOfRows: '1000', dataType: 'JSON', base_date: previous, base_time: '2300', nx, ny });
   const endpoint = 'https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst';
@@ -47,7 +47,7 @@ module.exports = async function handler(req, res) {
   if (typeof region !== 'string' || !Object.hasOwn(grids, region)) {
     return res.status(400).json({ error: 'region은 세종, 대전, 태안, 보령 중 하나여야 합니다.' });
   }
-  if (!process.env.ServerKey?.trim()) return res.status(503).json({ error: '서버 ServerKey 설정이 필요합니다.' });
+  if (!process.env.ServiceKey?.trim()) return res.status(503).json({ error: '서버 ServiceKey 설정이 필요합니다.' });
   try {
     const url = new URL('/rest/v1/wx_tasks', process.env.SUPABASE_URL || publicUrl);
     url.search = new URLSearchParams({ select: 'id,title,region,kind,owner,created_at', region: 'eq.' + region, order: 'created_at.asc,id.asc' });
@@ -56,7 +56,7 @@ module.exports = async function handler(req, res) {
     let weather = null;
     let weatherError;
     try { weather = await weatherFor(region, new Date()); }
-    catch (_) { weatherError = '기상청 날씨를 조회하지 못했습니다. ServerKey와 공공데이터포털 단기예보 이용 권한을 확인하세요.'; }
+    catch (_) { weatherError = '기상청 날씨를 조회하지 못했습니다. ServiceKey와 공공데이터포털 단기예보 이용 권한을 확인하세요.'; }
     return res.status(200).json({ region, weather, ...(weatherError ? { weatherError } : {}), count: tasks.length,
       tasks: tasks.map(task => ({ ...task, weather, judgment: judge(task.kind, weather) })) });
   } catch (_) {
