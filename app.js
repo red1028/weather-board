@@ -2,6 +2,7 @@
 
 let tasks = [];
 let weatherByRegion = {};
+let judgmentById = {};
 const windTest = new URLSearchParams(location.search).get('test') === 'wind';
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -9,13 +10,20 @@ async function loadWeather() {
   const status = document.getElementById('weatherBox');
   const failed = [];
   status.textContent = '오늘 날씨를 불러오는 중…' + (windTest ? ' [시험: 풍속 12 m/s]' : '');
+  if (location.protocol === 'file:') {
+    status.textContent = '기상청 날씨와 판단은 배포된 웹 주소에서 확인해 주세요. 로컬에서는 DB 일정만 표시합니다.';
+    return;
+  }
   await Promise.all(Object.keys(REGIONS).map(async (region) => {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10000);
     try {
-      const response = await fetch(buildWeatherUrl(region), { signal: controller.signal });
+      const response = await fetch('/api/kma?region=' + encodeURIComponent(region), { signal: controller.signal });
       if (!response.ok) throw new Error('HTTP ' + response.status);
-      const weather = parseWeatherResponse(await response.json());
+      const result = await response.json();
+      const weather = result.weather;
+      if (!weather || ![weather.tempMax, weather.windMax, weather.rainProb].every(Number.isFinite)) throw new Error('날씨 수신 실패');
+      for (const task of result.tasks || []) judgmentById[task.id] = task.judgment;
       weatherByRegion[region] = windTest ? { ...weather, windMax: 12 } : weather;
     } catch (error) {
       failed.push(region);
@@ -26,7 +34,7 @@ async function loadWeather() {
   }));
   status.textContent = (failed.length
     ? '날씨 수신 실패: ' + failed.join(' · ') + ' — 일정은 계속 표시합니다. 새로고침해 다시 시도하세요.'
-    : '한국 시간 기준 오늘 예보 · 최고 기온 / 최대 풍속 / 최대 강수확률')
+    : '기상청 · 한국 시간 오늘 예보 (전일 23시 발표) · 최고 기온 / 최대 풍속 / 최대 강수확률')
     + (windTest ? ' [시험 모드: 수신한 날씨의 풍속을 12 m/s로 변경]' : '');
 }
 
@@ -68,7 +76,7 @@ function renderTasks() {
   body.innerHTML = '';
   for (const t of tasks) {
     const w = weatherByRegion[t.region];
-    const r = judge(t.kind, w);
+    const r = (!windTest && judgmentById[t.id]) || judge(t.kind, w);
     const tr = document.createElement('tr');
     for (const v of [t.title, t.region, t.kind, t.owner, weatherText(w)]) {
       const td = document.createElement('td');
