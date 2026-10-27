@@ -11,7 +11,33 @@ const SAMPLE_TASKS = [
 ];
 
 let tasks = [];
-let weatherByRegion = {};   // 03 단원에서 지역별 날씨를 넣음
+let weatherByRegion = {};
+const windTest = new URLSearchParams(location.search).get('test') === 'wind';
+
+async function loadWeather() {
+  const status = document.getElementById('weatherBox');
+  const failed = [];
+  status.textContent = '오늘 날씨를 불러오는 중…' + (windTest ? ' [시험: 풍속 12 m/s]' : '');
+  await Promise.all(Object.keys(REGIONS).map(async (region) => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    try {
+      const response = await fetch(buildWeatherUrl(region), { signal: controller.signal });
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      const weather = parseWeatherResponse(await response.json());
+      weatherByRegion[region] = windTest ? { ...weather, windMax: 12 } : weather;
+    } catch (error) {
+      failed.push(region);
+    } finally {
+      clearTimeout(timeout);
+      renderTasks();
+    }
+  }));
+  status.textContent = (failed.length
+    ? '날씨 수신 실패: ' + failed.join(' · ') + ' — 일정은 계속 표시합니다. 새로고침해 다시 시도하세요.'
+    : '한국 시간 기준 오늘 예보 · 최고 기온 / 최대 풍속 / 최대 강수확률')
+    + (windTest ? ' [시험 모드: 수신한 날씨의 풍속을 12 m/s로 변경]' : '');
+}
 
 function loadTasks() {
   const saved = JSON.parse(localStorage.getItem('wx_added') || '[]');
@@ -78,3 +104,4 @@ setInterval(updateCurrentTime, 1000);
 document.getElementById('taskForm').addEventListener('submit', addTask);
 loadTasks();
 renderTasks();
+loadWeather();
