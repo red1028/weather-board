@@ -59,6 +59,22 @@ function addTask(e) {
   renderTasks();
 }
 
+const clockFormatter = new Intl.DateTimeFormat('ko-KR', {
+  timeZone: 'Asia/Seoul',
+  year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short',
+  hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+});
+
+function updateCurrentTime() {
+  const now = new Date();
+  const clock = document.getElementById('currentTime');
+  clock.dateTime = now.toISOString();
+  clock.textContent = clockFormatter.format(now);
+}
+
+updateCurrentTime();
+setInterval(updateCurrentTime, 1000);
+
 document.getElementById('taskForm').addEventListener('submit', addTask);
 loadTasks();
 renderTasks();
